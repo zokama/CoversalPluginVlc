@@ -9,6 +9,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import android.graphics.Bitmap;
@@ -24,12 +25,16 @@ public class VlcBrowser extends Browsable {
 	// Global variables
 	NodeList currentNode;
 	String currentDir;
-
+	private static final String HOME_STR = "~";
+	
 	Vlc profile;
 
 	VlcBrowser(Vlc vlc) {
 		super(vlc);
 		profile = vlc;
+		
+		profile.setOptionValue(OPTION_HOME_DIR, HOME_STR);
+
 	}
 
 	
@@ -86,7 +91,7 @@ public class VlcBrowser extends Browsable {
 		
 		if (dir.equals(BACK_STR)) {
 			Vlc.debug("BACK STRING DETECTED setting current dir to "+currentDir.replaceAll("(.*)%2F.+%2F\\.\\.$", "$1"));
-			currentDir = currentDir.replaceAll("(.*)%2F.+%2F\\.\\.$", "$1");
+			currentDir = currentDir.replaceAll("(.*)(%2F|%5C).+(%2F|%5C)\\.\\.$", "$1");
 			if (currentDir.equals(""))
 				currentDir = ROOT_STR;
 		}
@@ -95,7 +100,9 @@ public class VlcBrowser extends Browsable {
 		for(int i=0; i<currentNode.getLength(); i++) {
 			dirContent.add(new AdapterItem(-1, currentNode.item(i).getAttributes().
 				getNamedItem("name").getNodeValue(), null, null, null));
-       }
+		}
+		
+		standardSort(dirContent);
 		
 		return dirContent;
 	}
@@ -108,11 +115,9 @@ public class VlcBrowser extends Browsable {
 	}
 
 	
-	
-	
+		
 	@Override
 	public Bitmap getCover(String item) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -129,13 +134,18 @@ public class VlcBrowser extends Browsable {
 	@Override
 	public int getItemType(String item) {
 
+		if (item.equals(BACK_STR)) return ITEM_TYPE_BACK;
+		
 		if (currentNode == null) return Vlc.ITEM_TYPE_UNKNOWN;
 		
 		for(int i=0; i<currentNode.getLength(); i++) {
 			if(currentNode.item(i).getAttributes().getNamedItem("name").getNodeValue()
 					.equals(item)) {
-				if (currentNode.item(i).getAttributes().getNamedItem("type")
-						.getNodeValue().equalsIgnoreCase("directory"))
+				
+				String type =  currentNode.item(i).getAttributes().getNamedItem("type")
+						.getNodeValue();
+				
+				if (type.contains("dir"))
 					return Vlc.ITEM_TYPE_DIRECTORY;
 				else if (currentNode.item(i).getAttributes().getNamedItem("type")
 						.getNodeValue().equalsIgnoreCase("file"))
@@ -151,7 +161,20 @@ public class VlcBrowser extends Browsable {
 
 	@Override
 	public String getFullPath(String item) {
-		return getCurrentDir()+"/"+item;
+		for(int i=0; i<currentNode.getLength(); i++) {
+			if(currentNode.item(i).getAttributes().getNamedItem("name").getNodeValue()
+					.equals(item)) {
+				
+				Node n = currentNode.item(i).getAttributes().getNamedItem("uri");
+				if (n != null)
+					return n.getNodeValue(); //VLC v2.x
+				else 
+					return getCurrentDir()+"/"+item; //VLC v1.x
+					
+			}
+		}
+		
+		return item;
 	}
 
 }

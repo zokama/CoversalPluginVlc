@@ -1,13 +1,13 @@
 package com.coversal.plugin.vlc;
 
-import android.os.RemoteException;
 import android.text.InputType;
 
 import com.coversal.ucl.api.TextParameter;
 import com.coversal.ucl.plugin.Browsable;
 import com.coversal.ucl.plugin.Controller;
-import com.coversal.ucl.plugin.PluginAnnouncer;
+import com.coversal.ucl.plugin.PlaylistManager;
 import com.coversal.ucl.plugin.Profile;
+import com.coversal.ucl.plugin.ProfileAnnouncer;
 
 public class Vlc extends Profile{
 	
@@ -16,10 +16,11 @@ public class Vlc extends Profile{
 	static final String PORT = "Port";
 	private VlcBrowser browser;
 	private VlcController controller;
+	private VlcPlaylistManager playlist;
 
 	
 
-	public Vlc(PluginAnnouncer pa) {
+	public Vlc(ProfileAnnouncer pa) {
 		super(pa);
 	
 		// Define required parameters for when a new SSH source is added 
@@ -28,8 +29,7 @@ public class Vlc extends Profile{
 		
 		browser = new VlcBrowser(this);
 		controller = new VlcController(this);
-		
-
+		playlist = new VlcPlaylistManager(this);
 	}
 
 	@Override
@@ -59,6 +59,10 @@ public class Vlc extends Profile{
 		return controller;
 	}
 
+	@Override
+	public PlaylistManager getPlaylistManager() {
+		return playlist;
+	}
 	
 	@Override
 	public boolean init() {
@@ -68,33 +72,26 @@ public class Vlc extends Profile{
 	
 	
 	@Override
-	public boolean isActive() throws RemoteException {
-		// TODO Auto-generated method stub
+	public boolean isActive() {
 		return false;
 	}
 
 
 	@Override
-	public boolean isPasswordRequired() throws RemoteException {
-		// TODO Auto-generated method stub
+	public boolean isPasswordRequired() {
 		return false;
 	}
 
 	@Override
-	public void setPassword(String arg0) throws RemoteException {
-		// TODO Auto-generated method stub
-		
+	public void setPassword(String arg0) {		
 	}
 	
 
 	@Override
-	public void close() throws RemoteException {
-		// TODO Auto-generated method stub
-		
+	public void close() {		
 	}
 
 	@Override
 	public void onConfigurationUpdate() {
 	}
-
 }

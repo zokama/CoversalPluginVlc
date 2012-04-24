@@ -18,14 +18,13 @@ import com.coversal.ucl.plugin.Controller;
 
 public class VlcController extends Controller{
 
-	String cmdBaseUri;
 	Vlc profile;
     HttpClient httpclient;   
 
     private String playingMedia = "-";
     
 	VlcController(Vlc vlc) {
-		super();
+		super(vlc);
 		
 		profile = vlc;
 		httpclient = new DefaultHttpClient();
@@ -62,34 +61,35 @@ public class VlcController extends Controller{
 	
 	@Override
 	public boolean execute(String cmd) {
-		//if (cmdBaseUri == null)
-			cmdBaseUri = "http://" + profile.getValue(Vlc.HOSTNAME) 
-					+ ":" + profile.getValue(Vlc.PORT) + "/requests/status.xml?command=";
+		String post = "http://" + profile.getValue(Vlc.HOSTNAME) 
+				+ ":" + profile.getValue(Vlc.PORT) + "/requests/status.xml";
 		
-		String post = cmdBaseUri;
+		if (cmd != null) {
+			post += "?command=";
+			
+			if (getCommand(cmd) != null)
+				post += getCommand(cmd);
+			else 
+				// post += cmd.replaceAll("\\\\", "/");
+				post += cmd.replaceAll("%5C", "%2F").replaceAll("'", "%5C'");
+		}
 		
-		if (getCommand(cmd) != null)
-			post += getCommand(cmd);
-		else 
-			// post += cmd.replaceAll("\\\\", "/");
-			post += cmd.replaceAll("%5C", "%2F").replaceAll("'", "%5C'");
-		
-//		Log.d("Coversal VLC PLugin", "CMD: "+ post);
-		    // Create a new HttpClient and Post Header   
-		    HttpPost httppost = new HttpPost(post); 
+	    // Create a new HttpClient and Post Header   
+	    HttpPost httppost = new HttpPost(post); 
+	    
+        try {
+        	InputStream is = httpclient.execute(httppost).getEntity().getContent();
+        	if (is != null) {
+        		// consume reponse otherwise we get warnings
+        		//while(is.read() > 0);
+        		readStatus(is);
+        		is.close();
+        	}
 		    
-	        try {
-	        	InputStream is = httpclient.execute(httppost).getEntity().getContent();
-	        	if (is != null) {
-	        		// consume reponse otherwise we get warnings
-	        		//while(is.read() > 0);
-	        		readStatus(is);
-	        		is.close();
-	        	}
-			    
-			} catch (Exception e) {
-				e.printStackTrace();
-			}  
+		} catch (Exception e) {
+			e.printStackTrace();
+		}  
+        
 		return false;
 	}
 
@@ -103,12 +103,15 @@ public class VlcController extends Controller{
 			
 			// normalize text representation
 			doc.getDocumentElement().normalize();
-			NodeList nodes = doc.getElementsByTagName("title");
+			NodeList nodes = doc.getElementsByTagName("info");
 			
-			if (nodes != null && nodes.getLength() > 0 && nodes.item(0).getFirstChild() != null)
-				playingMedia = nodes.item(0).getFirstChild()
-				.getNodeValue().replaceAll(".*/(.+)$", "$1");
-			else 
+			for (int i=0; i<nodes.getLength(); i++)
+				if (nodes.item(i).getAttributes().getNamedItem("name")
+						.getNodeValue().equals("filename")) {
+					playingMedia =  nodes.item(i).getFirstChild().getNodeValue();
+					return;
+				}
+			
 				playingMedia = "-";
 			
 		} catch (Exception e) {
@@ -128,7 +131,7 @@ public class VlcController extends Controller{
 	
 	@Override
 	public String getLayoutName() {
-		return "sshmote";
+		return "coversal1";
 	}
 
 
@@ -150,6 +153,7 @@ public class VlcController extends Controller{
 	
 	@Override
 	public String getPlayingMedia() {
+		execute(null);
 		return playingMedia;
 	}
 
@@ -180,8 +184,13 @@ public class VlcController extends Controller{
 
 	@Override
 	public void onItemSelected(String action, String media){
-		playingMedia = media.replaceAll(".*/(.+)$", "$1");
-		execute(getCommand(Vlc.START_PLAY)+ Uri.encode(media));
+		if (action == null) {
+			playingMedia = media.replaceAll(".*/(.+)$", "$1");
+			execute(getCommand(Vlc.START_PLAY)+ Uri.encode(media));
+		}
+//		else if (action.equals(ADD_TO_PLAYLIST)){
+//			execute(getCommand(ADD_TO_PLAYLIST)+ Uri.encode(media));
+//		}
 	}
 	
 
